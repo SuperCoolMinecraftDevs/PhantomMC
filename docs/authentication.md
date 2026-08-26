@@ -85,6 +85,44 @@ operates a manifest server chooses what to put there and owns that choice.
 
 See [ADR 0005](adr/0005-microsoft-client-id-is-a-build-input.md).
 
+## Verifying it works
+
+The sign in chain can be exercised without building an image or booting
+anything:
+
+```sh
+make build
+./out/phantomd -signin-test -client-id <application-id>
+```
+
+It requests a device code, prints it, waits for approval, walks the Xbox Live
+and XSTS hops, exchanges for a Minecraft token and looks up the profile. On
+success it reports the username and uuid. The access token is shown only as a
+redacted fragment, because that output ends up in consoles, journals and pasted
+bug reports.
+
+The client id is taken from, in order of priority:
+
+| Source | Example |
+| --- | --- |
+| Command line | `phantomd -client-id <id>` |
+| Environment | `PHANTOM_CLIENT_ID=<id> phantomd ...` |
+| Manifest | `"auth": { "mode": "microsoft", "clientId": "<id>" }` |
+
+The command line wins so a single run can be overridden without editing a
+manifest. A deployment normally carries the value in the manifest, so that
+rotating it takes effect on the next boot rather than requiring anyone to
+re-flash.
+
+Failures at this stage are usually one of:
+
+| Symptom | Cause |
+| --- | --- |
+| `AADSTS700016: Application with identifier ... was not found` | The client id does not exist, or is not registered for personal Microsoft accounts |
+| `Invalid app registration, see aka.ms/AppRegInfo` | The application exists but has not been granted access to the Minecraft API |
+| `this Microsoft account has no Xbox profile` | XSTS refused. Create an Xbox profile once at xbox.com |
+| `this account does not own Minecraft Java Edition` | Sign in worked. The account has no entitlement |
+
 ## Offline mode
 
 Offline mode is a real feature with real uses: authentication server outages,

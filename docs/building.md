@@ -123,6 +123,16 @@ make test         # with the race detector
 make lint         # go vet, gofmt check, shellcheck
 ```
 
+## Verifying microsoft sign in
+
+```sh
+./out/phantomd -signin-test -client-id <application-id>
+```
+
+Runs only the sign in chain, prints a device code to approve on a phone, and
+reports the resulting username and uuid. No image, no boot, no downloads. See
+[authentication.md](authentication.md).
+
 ## Running the agent by hand
 
 The agent runs outside an image, which makes iterating on manifest handling

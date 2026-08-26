@@ -39,3 +39,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   detection. Sign in runs concurrently with the download.
 - `auth.clientId` in the manifest, so the Azure application can be rotated
   without re-flashing a boot medium.
+- `-client-id` flag and `PHANTOM_CLIENT_ID` environment variable, taking
+  priority over the manifest in that order.
+- `-signin-test` mode that runs only the sign in chain and reports the result,
+  with the access token redacted.
