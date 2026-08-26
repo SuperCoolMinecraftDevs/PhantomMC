@@ -8,8 +8,8 @@ person and are the honest numbers, not the optimistic ones.
 ```
   M0 ████████████████████  done   foundation
   M1 ████████████████████  done   bootable image, root in RAM
-  M2 ░░░░░░░░░░░░░░░░░░░░         graphics and a running game   ◀── here
-  M3 ░░░░░░░░░░░░░░░░░░░░         launcher core
+  M2 ██████████████░░░░░░         graphics and a running game   ◀── here
+  M3 ██████████████████░░         launcher core
   M4 ░░░░░░░░░░░░░░░░░░░░         authentication
   M5 ░░░░░░░░░░░░░░░░░░░░         network bring up
   M6 ░░░░░░░░░░░░░░░░░░░░         mods and loaders
@@ -33,23 +33,33 @@ and stacks a tmpfs overlay. QEMU smoke test asserting all of it.
 Verified: boots to a login prompt on the RAM backed overlay with the medium
 already released.
 
-## M2 Graphics and a running game — 2 weekends
+## M2 Graphics and a running game — mostly done
 
 The milestone that decides whether the project works.
 
-- Mesa, `seatd`, `cage`, XWayland in the image
-- A JRE fetched at build time
-- Vanilla Minecraft launching full screen on real hardware
-- Confirm Mojang's glibc natives load, which is the whole premise of ADR 0002
+- Mesa, `seatd`, `cage`, XWayland in the image: done
+- Java runtimes in the image: done, 21 and 25
+- Mojang's glibc natives load: **confirmed**. LWJGL 3.3.3 extracted and loaded
+  `liblwjgl.so` on Debian and reached GLFW initialization, which is the whole
+  premise of [ADR 0002](adr/0002-glibc-base-instead-of-alpine.md)
+- Vanilla Minecraft launching full screen on real hardware: not yet verified
 
-Risk: high. Wayland, seat management and GPU initialization outside a desktop
-session is where the unknowns are. Everything after this is ordinary software.
+Remaining risk is narrow now: the game runs, so what is left is whether cage,
+seatd and XWayland hand it a working surface outside a desktop session. That
+cannot be tested without a real GPU.
 
-## M3 Launcher core — 1 to 2 weekends
+## M3 Launcher core — mostly done
 
-Resolving Mojang's piston metadata into something launchable: version manifest,
-asset index, library artifacts matched to the platform, natives extraction,
-classpath assembly, digest verification, resumable downloads.
+Version manifest and version document resolution, platform rule evaluation,
+library selection, asset index handling, concurrent digest verified downloads,
+classpath assembly, argument substitution, Java runtime selection by exact
+major, and process supervision.
+
+Verified against the live Mojang servers: 71 libraries and 4271 asset objects
+downloaded, and the game launched as far as GLFW.
+
+Left: resuming interrupted downloads by range request, and a disk space check
+before starting a half gigabyte of downloads.
 
 ## M4 Authentication — 1 weekend, blocked
 

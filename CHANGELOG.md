@@ -27,3 +27,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Java 21 and Java 25.
 - Kiosk session units, the phantom runtime user and a graphical default
   target.
+- Concurrent asset fetching with digest verification and progress reporting.
+- End to end install: resolve a version, download libraries and assets,
+  select a matching Java runtime, assemble the command line and launch.
+- Process supervision classifying a session as quit, crash or signalled, and
+  flagging sessions too short to have reached the menu.
+- Offline account identity derived the same way Minecraft has always derived
+  it, so a player keeps a stable uuid without anything being stored.
