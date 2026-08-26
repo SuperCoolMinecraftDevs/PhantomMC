@@ -7,8 +7,13 @@ Debian or Ubuntu, root access, roughly 8 GiB of free disk, and:
 ```sh
 sudo apt-get install --no-install-recommends \
   mmdebstrap squashfs-tools xorriso mtools dosfstools \
-  grub-efi-amd64-bin grub-pc-bin qemu-system-x86 shellcheck
+  grub-efi-amd64-bin grub-pc-bin qemu-system-x86 shellcheck \
+  debian-archive-keyring
 ```
+
+`debian-archive-keyring` is easy to overlook on an Ubuntu host, where it is
+not installed by default. Without it the bootstrap fails with apt reporting
+the Debian repository as unsigned rather than saying a key is missing.
 
 Go 1.27 or newer for the agent. Root is required because `mmdebstrap` creates
 device nodes and `mksquashfs` preserves ownership.
