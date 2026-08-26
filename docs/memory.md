@@ -35,20 +35,42 @@ Measured where marked, estimated otherwise.
 
 | Component | Size | Status |
 | --- | --- | --- |
-| Kernel and initramfs | 80 MiB | measured, minimal profile |
+| Kernel and initramfs | 80 MiB | measured |
 | Compressed root, minimal profile | 174 MiB | measured |
-| Compressed root, full profile | 250 to 350 MiB | estimated, not yet built |
+| Compressed root, full profile | 393 MiB | measured |
+| Full profile ISO | 454 MiB | measured |
 | Overlay at idle | 50 MiB | estimated |
 | Vanilla game, assets and libraries | 400 to 600 MiB | estimated |
 | A large modpack on top | up to 2 GiB | estimated |
 
-So the operating system overhead lands around 400 MiB. On a 32 GiB machine that
-is noise. On an 8 GiB laptop it still leaves roughly 7 GiB for the JVM, which is
-more headroom than a Windows install with a browser open would give you.
+The full profile came in at 393 MiB against an estimate of 250 to 350 MiB in
+[ADR 0003](adr/0003-compressed-root-in-ram.md). The estimate was low and the ADR
+has been left as written, because it records what was believed when the decision
+was made.
 
-The full profile figure is honestly uncertain. Mesa with every driver, firmware
-for wifi and GPUs, and a JRE are all substantial, and none of them have been
-bootstrapped yet. Expect the estimate to move.
+So the operating system overhead lands around 470 MiB rather than 400 MiB. On a
+32 GiB machine that is still noise. On an 8 GiB laptop it leaves roughly 7 GiB
+for the JVM, which is more headroom than a Windows install with a browser open
+would give you. On a 4 GiB machine it is now genuinely tight and trimming
+matters.
+
+## Where the weight is
+
+Installed size of the directly listed packages, before dependencies:
+
+| List | Size | Notes |
+| --- | --- | --- |
+| firmware | 233 MiB | Dominates everything else |
+| graphics | 88 MiB | Mesa with every driver |
+| base | 21 MiB | |
+| network | 3 MiB | |
+| java | 3 MiB | Metapackages. The real cost is in the headless runtimes they pull |
+| boot | 2 MiB | |
+
+Firmware is more than half the image and the obvious place to cut. Most of it is
+for hardware any given machine does not have. Splitting firmware by GPU vendor at
+build time, the way `--gpu` already splits drivers, would cut a substantial
+amount for anyone who knows what card they are running.
 
 ## Trimming
 
