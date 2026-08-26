@@ -100,6 +100,8 @@ bootstrap() {
 	# Excluding man pages removes the directories they live in, and packages
 	# that register an alternative for a man page fail in postinst when the
 	# target directory is missing. openjdk is one of them.
+	# $1 in the hook is expanded by mmdebstrap, not by this shell.
+	# shellcheck disable=SC2016
 	mmdebstrap \
 		--variant=minbase \
 		--keyring="$KEYRING" \
