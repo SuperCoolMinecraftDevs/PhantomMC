@@ -41,3 +41,27 @@ func TestCenterPads(t *testing.T) {
 		t.Errorf("oversized text should pass through, got %q", got)
 	}
 }
+
+func TestRedactNeverRevealsAWholeToken(t *testing.T) {
+	const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature"
+
+	got := redact(token)
+	if strings.Contains(got, token) {
+		t.Fatalf("full token leaked: %s", got)
+	}
+	if !strings.Contains(got, "redacted") {
+		t.Errorf("output should say it is redacted: %s", got)
+	}
+	if strings.Contains(got, "payload") {
+		t.Errorf("middle of the token leaked: %s", got)
+	}
+}
+
+func TestRedactHandlesShortInput(t *testing.T) {
+	if got := redact("abc"); got != "(present)" {
+		t.Errorf("a short token should not be sliced, got %q", got)
+	}
+	if got := redact(""); got != "(present)" {
+		t.Errorf("empty token, got %q", got)
+	}
+}

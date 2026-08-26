@@ -13,11 +13,12 @@ import (
 )
 
 type Config struct {
-	Source  string
-	Root    string
-	JVMRoot string
-	Workers int
-	DryRun  bool
+	Source   string
+	Root     string
+	JVMRoot  string
+	ClientID string
+	Workers  int
+	DryRun   bool
 }
 
 // Plan is everything the agent intends to do, derived from a manifest. It is
@@ -85,7 +86,7 @@ func Launch(ctx context.Context, m *manifest.Manifest, config Config, out io.Wri
 	}
 	auth := make(chan authResult, 1)
 	go func() {
-		account, err := resolveAccount(ctx, m, out)
+		account, err := resolveAccount(ctx, m, config, out)
 		auth <- authResult{account, err}
 	}()
 
@@ -131,12 +132,16 @@ func Launch(ctx context.Context, m *manifest.Manifest, config Config, out io.Wri
 	return launcher.Run(ctx, args)
 }
 
-func resolveAccount(ctx context.Context, m *manifest.Manifest, out io.Writer) (Account, error) {
+func resolveAccount(ctx context.Context, m *manifest.Manifest, config Config, out io.Writer) (Account, error) {
 	switch m.Auth.Mode {
 	case manifest.AuthOffline:
 		return OfflineAccount(m.Auth.OfflineUsername), nil
 	case manifest.AuthMicrosoft:
-		return SignIn(ctx, m.Auth, out)
+		clientID, source := ResolveClientID(config.ClientID, m.Auth.ClientID)
+		if source != ClientIDMissing {
+			fmt.Fprintf(out, "client id   from %s\n", source)
+		}
+		return SignIn(ctx, m.Auth, clientID, out)
 	default:
 		return Account{}, fmt.Errorf("unknown auth mode %q", m.Auth.Mode)
 	}

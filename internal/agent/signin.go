@@ -13,8 +13,11 @@ import (
 // SignIn runs the device code flow and returns a playable account. There is no
 // browser on this machine and nowhere to keep a token, so the user approves on
 // a phone and the result lives only as long as the boot.
-func SignIn(ctx context.Context, auth manifest.Auth, out io.Writer) (Account, error) {
-	cfg := &msauth.Config{ClientID: auth.ClientID}
+func SignIn(ctx context.Context, auth manifest.Auth, clientID string, out io.Writer) (Account, error) {
+	if clientID == "" {
+		return Account{}, fmt.Errorf("%s", MissingClientIDHelp)
+	}
+	cfg := &msauth.Config{ClientID: clientID}
 
 	code, err := cfg.RequestDeviceCode(ctx)
 	if err != nil {
@@ -33,7 +36,9 @@ func SignIn(ctx context.Context, auth manifest.Auth, out io.Writer) (Account, er
 		return Account{}, err
 	}
 
-	fmt.Fprintf(out, "\nsigned in as %s\n", profile.Name)
+	// The access token is deliberately not printed. It grants control of the
+	// account and this output goes to a console and a journal.
+	fmt.Fprintf(out, "\nsigned in as %s (%s)\n", profile.Name, profile.UUID)
 	return Account{
 		Name:        profile.Name,
 		UUID:        profile.UUID,
@@ -76,4 +81,30 @@ func center(s string, width int) string {
 	}
 	left := (width - len(s)) / 2
 	return repeat(" ", left) + s + repeat(" ", width-len(s)-left)
+}
+
+// SignInOnly runs the sign in chain and nothing else. It exists so the flow can
+// be verified against a real Azure application without building an image,
+// booting a machine, or downloading half a gigabyte of game first.
+func SignInOnly(ctx context.Context, clientID string, out io.Writer) error {
+	account, err := SignIn(ctx, manifest.Auth{Mode: manifest.AuthMicrosoft}, clientID, out)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(out, "\nsign in succeeded\n")
+	fmt.Fprintf(out, "  username  %s\n", account.Name)
+	fmt.Fprintf(out, "  uuid      %s\n", account.UUID)
+	fmt.Fprintf(out, "  usertype  %s\n", account.UserType)
+	fmt.Fprintf(out, "  token     %s\n", redact(account.AccessToken))
+	return nil
+}
+
+// redact keeps enough of the token to confirm one was issued without putting a
+// live credential into a terminal, a screenshot, or a pasted log.
+func redact(token string) string {
+	if len(token) < 12 {
+		return "(present)"
+	}
+	return token[:6] + "..." + token[len(token)-4:] + fmt.Sprintf(" (%d chars, redacted)", len(token))
 }
