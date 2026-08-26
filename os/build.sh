@@ -12,6 +12,7 @@ readonly INITRAMFS_DIR="${REPO_ROOT}/os/initramfs"
 SUITE="trixie"
 MIRROR="http://deb.debian.org/debian"
 GPU="auto"
+LISTS="base,boot,network,graphics,firmware"
 LABEL="PHANTOMMC"
 WORK="${REPO_ROOT}/build"
 OUT="${REPO_ROOT}/out"
@@ -25,6 +26,7 @@ usage() {
 		  --suite NAME    Debian suite to bootstrap (default: ${SUITE})
 		  --mirror URL    Debian mirror (default: ${MIRROR})
 		  --gpu VENDOR    auto or nvidia (default: ${GPU})
+		  --lists NAMES   Comma separated package lists (default: ${LISTS})
 		  --out DIR       Output directory (default: ${OUT})
 		  --work DIR      Scratch directory (default: ${WORK})
 		  --keep-rootfs   Do not delete the bootstrapped tree on exit
@@ -44,6 +46,7 @@ parse_args() {
 		--suite) SUITE="$2"; shift 2 ;;
 		--mirror) MIRROR="$2"; shift 2 ;;
 		--gpu) GPU="$2"; shift 2 ;;
+		--lists) LISTS="$2"; shift 2 ;;
 		--out) OUT="$2"; shift 2 ;;
 		--work) WORK="$2"; shift 2 ;;
 		--keep-rootfs) KEEP_ROOTFS=1; shift ;;
@@ -71,7 +74,8 @@ require_tools() {
 }
 
 package_list() {
-	local lists=(base boot network graphics firmware)
+	local lists
+	IFS="," read -r -a lists <<<"$LISTS"
 	[ "$GPU" = "nvidia" ] && lists+=(nvidia)
 
 	for name in "${lists[@]}"; do
@@ -178,11 +182,20 @@ build_efi_image() {
 		--modules="part_gpt part_msdos fat iso9660 normal linux search search_label configfile" \
 		"boot/grub/grub.cfg=${WORK}/iso/boot/grub/grub.cfg"
 
-	local esp="${WORK}/iso/boot/grub/efi.img"
+	# grub-mkstandalone embeds a memdisk, so the payload is several megabytes and
+	# its size moves with the module list. Size the partition from the artefact
+	# rather than guessing.
+	local esp payload_kb esp_kb
+	esp="${WORK}/iso/boot/grub/efi.img"
+	payload_kb=$(( ($(stat -c %s "${staging}/EFI/BOOT/BOOTX64.EFI") + 1023) / 1024 ))
+	esp_kb=$(( payload_kb + 1024 ))
+	esp_kb=$(( (esp_kb + 31) / 32 * 32 ))
+
 	rm -f "$esp"
-	mkfs.vfat -C -n PHANTOMEFI "$esp" 4096 >/dev/null
+	mkfs.vfat -C -n PHANTOMEFI "$esp" "$esp_kb" >/dev/null
 	mmd -i "$esp" ::/EFI ::/EFI/BOOT
 	mcopy -i "$esp" "${staging}/EFI/BOOT/BOOTX64.EFI" ::/EFI/BOOT/
+	log "efi partition is ${esp_kb} KiB for a ${payload_kb} KiB payload"
 }
 
 build_bios_image() {
