@@ -1,0 +1,19 @@
+[Unit]
+Description=PhantomMC game session
+After=phantom-agent.service
+Requires=phantom-agent.service
+
+[Service]
+Type=simple
+User=phantom
+Group=phantom
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal+console
+StandardError=journal+console
+ExecStart=/usr/lib/phantom/session
+Restart=no
+
+[Install]
+WantedBy=graphical.target

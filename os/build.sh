@@ -12,7 +12,7 @@ readonly INITRAMFS_DIR="${REPO_ROOT}/os/initramfs"
 SUITE="trixie"
 MIRROR="http://deb.debian.org/debian"
 GPU="auto"
-LISTS="base,boot,network,graphics,firmware"
+LISTS="base,boot,network,graphics,java,firmware"
 LABEL="PHANTOMMC"
 KEYRING="/usr/share/keyrings/debian-archive-keyring.gpg"
 WORK="${REPO_ROOT}/build"
@@ -118,8 +118,25 @@ configure() {
 		cp -a "${OVERLAY_DIR}/." "${ROOTFS}/"
 	fi
 
+	if [ -x "${OUT}/phantomd" ]; then
+		install -m 0755 "${OUT}/phantomd" "${ROOTFS}/usr/bin/phantomd"
+	else
+		log "no agent binary in ${OUT}, image will boot without phantomd"
+	fi
+
 	echo "phantom" >"${ROOTFS}/etc/hostname"
 	printf 'PhantomMC \\n \\l\n\n' >"${ROOTFS}/etc/issue"
+
+	chroot "$ROOTFS" useradd --system --create-home \
+		--home-dir /var/lib/phantom \
+		--shell /usr/sbin/nologin \
+		--groups video,input,render \
+		phantom
+
+	chroot "$ROOTFS" systemctl enable seatd.service
+	chroot "$ROOTFS" systemctl enable phantom-agent.service
+	chroot "$ROOTFS" systemctl enable phantom-session.service
+	chroot "$ROOTFS" systemctl set-default graphical.target
 
 	# apt is a build time tool only. Nothing at runtime may use it.
 	chroot "$ROOTFS" apt-get clean

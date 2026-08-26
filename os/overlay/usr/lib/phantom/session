@@ -1,0 +1,13 @@
+#!/bin/sh
+# Starts the kiosk compositor and hands it the game. Runs as the phantom user
+# with a seat assigned by seatd.
+set -eu
+
+XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export XDG_RUNTIME_DIR
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 0700 "$XDG_RUNTIME_DIR"
+
+# Minecraft's bundled GLFW targets X11, so the session runs XWayland underneath
+# cage rather than attempting a native Wayland surface. See docs/hardware.md.
+exec cage -d -- /usr/lib/phantom/launch

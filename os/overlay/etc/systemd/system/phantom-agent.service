@@ -1,0 +1,18 @@
+[Unit]
+Description=PhantomMC agent
+After=network-online.target seatd.service
+Wants=network-online.target
+Requires=seatd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=phantom
+Group=phantom
+ExecStart=/usr/bin/phantomd -manifest ${PHANTOM_MANIFEST} -root /var/lib/phantom
+EnvironmentFile=/etc/phantom/manifest.env
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

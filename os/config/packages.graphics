@@ -9,3 +9,4 @@ seatd
 cage
 xwayland
 fonts-dejavu-core
+mesa-utils

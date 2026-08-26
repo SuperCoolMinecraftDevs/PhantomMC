@@ -1,0 +1,5 @@
+#!/bin/sh
+# Placeholder until the launcher core lands. Proves the compositor comes up and
+# a GL client can reach the GPU.
+set -eu
+exec glxgears
