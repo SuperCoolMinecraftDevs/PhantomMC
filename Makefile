@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 GO ?= go
 OUT ?= out
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
 GO_PKGS := ./...
 SH_FILES := $(shell find os -name '*.sh' 2>/dev/null)
@@ -15,7 +16,10 @@ help:
 .PHONY: build
 build: ## Compile all Go binaries into out/
 	@mkdir -p $(OUT)
-	$(GO) build -trimpath -o $(OUT)/ $(GO_PKGS)
+	@mains=$$($(GO) list -f '{{if eq .Name "main"}}{{.ImportPath}}{{end}}' $(GO_PKGS)); \
+	if [ -z "$$mains" ]; then echo "no main packages, nothing to build"; else \
+		set -x; $(GO) build -trimpath -ldflags "-X main.version=$(VERSION)" -o $(OUT)/ $$mains; \
+	fi
 
 .PHONY: test
 test: ## Run Go tests with race detector
