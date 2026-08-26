@@ -97,6 +97,9 @@ package_list() {
 
 bootstrap() {
 	log "bootstrapping ${SUITE} into ${ROOTFS}"
+	# Excluding man pages removes the directories they live in, and packages
+	# that register an alternative for a man page fail in postinst when the
+	# target directory is missing. openjdk is one of them.
 	mmdebstrap \
 		--variant=minbase \
 		--keyring="$KEYRING" \
@@ -106,6 +109,7 @@ bootstrap() {
 		--dpkgopt='path-exclude=/usr/share/man/*' \
 		--dpkgopt='path-exclude=/usr/share/doc/*' \
 		--dpkgopt='path-exclude=/usr/share/locale/*' \
+		--essential-hook='mkdir -p "$1/usr/share/man/man1"' \
 		--customize-hook="copy-in ${INITRAMFS_DIR}/hooks/phantom /etc/initramfs-tools/hooks" \
 		--customize-hook="copy-in ${INITRAMFS_DIR}/scripts/phantom /etc/initramfs-tools/scripts" \
 		--customize-hook="chroot \$1 chmod 0755 /etc/initramfs-tools/hooks/phantom /etc/initramfs-tools/scripts/phantom" \
