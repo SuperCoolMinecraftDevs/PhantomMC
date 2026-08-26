@@ -9,12 +9,15 @@ import (
 	"time"
 
 	"github.com/SuperCoolMinecraftDevs/PhantomMC/internal/manifest"
+	"github.com/SuperCoolMinecraftDevs/PhantomMC/internal/mojang"
 )
 
 type Config struct {
-	Source string
-	Root   string
-	DryRun bool
+	Source  string
+	Root    string
+	JVMRoot string
+	Workers int
+	DryRun  bool
 }
 
 // Plan is everything the agent intends to do, derived from a manifest. It is
@@ -49,7 +52,76 @@ func Run(ctx context.Context, config Config, out io.Writer) error {
 	if config.DryRun {
 		return nil
 	}
-	return fmt.Errorf("execution is not implemented yet, re-run with -dry-run")
+
+	session, err := Launch(ctx, m, config, out)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(out, "session ended: %s after %s\n",
+		session.Outcome, session.Runtime.Round(time.Second))
+	if session.ShortLived() {
+		return fmt.Errorf("the game exited after %s, which is too early to have reached the menu",
+			session.Runtime.Round(time.Second))
+	}
+	return nil
+}
+
+// Launch installs whatever is missing and runs the game to completion.
+func Launch(ctx context.Context, m *manifest.Manifest, config Config, out io.Writer) (Session, error) {
+	layout := NewLayout(config.Root)
+
+	installer := &Installer{
+		Client:  mojang.NewClient(&http.Client{Timeout: 5 * time.Minute}),
+		Layout:  layout,
+		Workers: config.Workers,
+		Log:     out,
+	}
+
+	spec, version, err := installer.Install(ctx, m)
+	if err != nil {
+		return Session{}, err
+	}
+
+	// The version document is authoritative about the runtime it needs. The
+	// manifest can be wrong, and a mismatch here fails in ways that are hard to
+	// read out of a crash log.
+	runtimes, err := FindRuntimes(config.JVMRoot)
+	if err != nil {
+		return Session{}, err
+	}
+	runtime, err := SelectRuntime(runtimes, version.JavaVersion.MajorVersion)
+	if err != nil {
+		return Session{}, err
+	}
+	fmt.Fprintf(out, "java        %d at %s\n", runtime.Major, runtime.Path)
+
+	account, err := resolveAccount(m)
+	if err != nil {
+		return Session{}, err
+	}
+
+	launcher := &Launcher{
+		Java:   runtime.Path,
+		Layout: layout,
+		Stdout: out,
+		Stderr: out,
+	}
+
+	args := launcher.Command(spec, m, account)
+	fmt.Fprintf(out, "launching   %s as %s\n", spec.MainClass, account.Name)
+	return launcher.Run(ctx, args)
+}
+
+func resolveAccount(m *manifest.Manifest) (Account, error) {
+	switch m.Auth.Mode {
+	case manifest.AuthOffline:
+		return OfflineAccount(m.Auth.OfflineUsername), nil
+	case manifest.AuthMicrosoft:
+		return Account{}, fmt.Errorf("microsoft sign in is not implemented yet")
+	default:
+		return Account{}, fmt.Errorf("unknown auth mode %q", m.Auth.Mode)
+	}
 }
 
 func BuildPlan(m *manifest.Manifest, root string) *Plan {

@@ -21,6 +21,8 @@ func main() {
 
 	flag.StringVar(&config.Source, "manifest", "", "path or https url of the build manifest")
 	flag.StringVar(&config.Root, "root", "/var/lib/phantom", "directory for the runtime environment")
+	flag.StringVar(&config.JVMRoot, "jvm-root", agent.DefaultJVMRoot, "directory holding installed java runtimes")
+	flag.IntVar(&config.Workers, "workers", 8, "concurrent downloads")
 	flag.BoolVar(&config.DryRun, "dry-run", false, "resolve and report the plan without changing anything")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
