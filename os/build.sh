@@ -14,6 +14,7 @@ MIRROR="http://deb.debian.org/debian"
 GPU="auto"
 LISTS="base,boot,network,graphics,firmware"
 LABEL="PHANTOMMC"
+KEYRING="/usr/share/keyrings/debian-archive-keyring.gpg"
 WORK="${REPO_ROOT}/build"
 OUT="${REPO_ROOT}/out"
 ROOTFS=""
@@ -26,6 +27,7 @@ usage() {
 		  --suite NAME    Debian suite to bootstrap (default: ${SUITE})
 		  --mirror URL    Debian mirror (default: ${MIRROR})
 		  --gpu VENDOR    auto or nvidia (default: ${GPU})
+		  --keyring PATH  Debian archive keyring (default: ${KEYRING})
 		  --lists NAMES   Comma separated package lists (default: ${LISTS})
 		  --out DIR       Output directory (default: ${OUT})
 		  --work DIR      Scratch directory (default: ${WORK})
@@ -46,6 +48,7 @@ parse_args() {
 		--suite) SUITE="$2"; shift 2 ;;
 		--mirror) MIRROR="$2"; shift 2 ;;
 		--gpu) GPU="$2"; shift 2 ;;
+		--keyring) KEYRING="$2"; shift 2 ;;
 		--lists) LISTS="$2"; shift 2 ;;
 		--out) OUT="$2"; shift 2 ;;
 		--work) WORK="$2"; shift 2 ;;
@@ -71,6 +74,13 @@ require_tools() {
 		command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
 	done
 	[ ${#missing[@]} -eq 0 ] || die "missing tools: ${missing[*]}"
+
+	# Bootstrapping Debian from a non-Debian host fails at the signature check
+	# unless the archive keyring is present, and apt reports it as an unsigned
+	# repository rather than a missing key, which is not an obvious diagnosis.
+	if [ ! -f "$KEYRING" ]; then
+		die "no Debian archive keyring at ${KEYRING}, install debian-archive-keyring"
+	fi
 }
 
 package_list() {
@@ -89,6 +99,7 @@ bootstrap() {
 	log "bootstrapping ${SUITE} into ${ROOTFS}"
 	mmdebstrap \
 		--variant=minbase \
+		--keyring="$KEYRING" \
 		--components="main,contrib,non-free-firmware" \
 		--include="$(package_list)" \
 		--aptopt='Apt::Install-Recommends "false"' \
