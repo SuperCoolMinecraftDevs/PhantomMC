@@ -68,8 +68,26 @@ func Run(ctx context.Context, config Config, out io.Writer) error {
 }
 
 // Launch installs whatever is missing and runs the game to completion.
+//
+// Sign in runs concurrently with the download. Both take time and neither
+// depends on the other, and the user is going to spend that minute looking at
+// their phone anyway. Doing them in sequence would also mean a misconfigured
+// client id is only discovered after half a gigabyte has been fetched.
 func Launch(ctx context.Context, m *manifest.Manifest, config Config, out io.Writer) (Session, error) {
 	layout := NewLayout(config.Root)
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	type authResult struct {
+		account Account
+		err     error
+	}
+	auth := make(chan authResult, 1)
+	go func() {
+		account, err := resolveAccount(ctx, m, out)
+		auth <- authResult{account, err}
+	}()
 
 	installer := &Installer{
 		Client:  mojang.NewClient(&http.Client{Timeout: 5 * time.Minute}),
@@ -96,9 +114,9 @@ func Launch(ctx context.Context, m *manifest.Manifest, config Config, out io.Wri
 	}
 	fmt.Fprintf(out, "java        %d at %s\n", runtime.Major, runtime.Path)
 
-	account, err := resolveAccount(m)
-	if err != nil {
-		return Session{}, err
+	result := <-auth
+	if result.err != nil {
+		return Session{}, result.err
 	}
 
 	launcher := &Launcher{
@@ -108,17 +126,17 @@ func Launch(ctx context.Context, m *manifest.Manifest, config Config, out io.Wri
 		Stderr: out,
 	}
 
-	args := launcher.Command(spec, m, account)
-	fmt.Fprintf(out, "launching   %s as %s\n", spec.MainClass, account.Name)
+	args := launcher.Command(spec, m, result.account)
+	fmt.Fprintf(out, "launching   %s as %s\n", spec.MainClass, result.account.Name)
 	return launcher.Run(ctx, args)
 }
 
-func resolveAccount(m *manifest.Manifest) (Account, error) {
+func resolveAccount(ctx context.Context, m *manifest.Manifest, out io.Writer) (Account, error) {
 	switch m.Auth.Mode {
 	case manifest.AuthOffline:
 		return OfflineAccount(m.Auth.OfflineUsername), nil
 	case manifest.AuthMicrosoft:
-		return Account{}, fmt.Errorf("microsoft sign in is not implemented yet")
+		return SignIn(ctx, m.Auth, out)
 	default:
 		return Account{}, fmt.Errorf("unknown auth mode %q", m.Auth.Mode)
 	}
