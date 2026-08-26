@@ -1,0 +1,14 @@
+# Core runtime. Kept deliberately short: anything that is not needed to boot,
+# reach the network, or run the agent belongs in another list.
+systemd-sysv
+udev
+dbus
+kmod
+libc-bin
+busybox
+iproute2
+iputils-ping
+ca-certificates
+curl
+less
+nano

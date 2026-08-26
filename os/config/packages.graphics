@@ -1,0 +1,11 @@
+# Mesa covers AMD and Intel with no configuration. Nvidia is a separate image
+# variant, see ADR 0002 and the --gpu flag in build.sh.
+libgl1-mesa-dri
+libglx-mesa0
+libegl-mesa0
+mesa-vulkan-drivers
+libvulkan1
+seatd
+cage
+xwayland
+fonts-dejavu-core

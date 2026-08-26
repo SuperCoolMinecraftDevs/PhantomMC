@@ -1,0 +1,107 @@
+#!/bin/sh
+# initramfs-tools boot script, selected with boot=phantom on the kernel command
+# line. Copies the compressed root into memory, releases the boot medium, and
+# builds a writable overlay on top of it. See ADR 0003.
+
+# shellcheck shell=dash
+# Runs under busybox ash, which supports 'local'. initramfs-tools provides
+# 'rootmnt', 'panic' and the functions file.
+# shellcheck disable=SC3043,SC2154
+
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+prereqs)
+	prereqs
+	exit 0
+	;;
+esac
+
+# shellcheck source=/dev/null
+. /scripts/functions
+
+PHANTOM_LABEL=PHANTOMMC
+PHANTOM_IMAGE=/phantom/root.squashfs
+PHANTOM_KEEP_MEDIUM=0
+
+MEDIUM=/run/phantom/medium
+RAM=/run/phantom/ram
+LOWER=/run/phantom/lower
+UPPER=/run/phantom/upper
+
+parse_cmdline() {
+	cmdline=$(cat /proc/cmdline)
+	for arg in $cmdline; do
+		case "$arg" in
+		phantom.label=*) PHANTOM_LABEL="${arg#phantom.label=}" ;;
+		phantom.keepmedium) PHANTOM_KEEP_MEDIUM=1 ;;
+		esac
+	done
+}
+
+say() {
+	printf '\n[ phantom ] %s\n' "$1" >/dev/console
+}
+
+fail() {
+	say "$1"
+	say "dropping to a shell"
+	panic "$1"
+}
+
+find_medium() {
+	local waited=0
+	while [ "$waited" -lt 30 ]; do
+		if [ -e "/dev/disk/by-label/${PHANTOM_LABEL}" ]; then
+			readlink -f "/dev/disk/by-label/${PHANTOM_LABEL}"
+			return 0
+		fi
+		sleep 1
+		waited=$((waited + 1))
+	done
+	return 1
+}
+
+copy_to_ram() {
+	local src="$1" dst="$2" size
+	size=$(stat -c %s "$src")
+	say "copying $((size / 1048576)) MiB into memory"
+	mount -t tmpfs -o "size=$((size + 8388608)),mode=0755" tmpfs "$RAM"
+	cp "$src" "$dst"
+	sync
+}
+
+mountroot() {
+	parse_cmdline
+	mkdir -p "$MEDIUM" "$RAM" "$LOWER" "$UPPER"
+
+	modprobe loop
+	modprobe squashfs
+	modprobe overlay
+
+	local device
+	device=$(find_medium) || fail "no medium labelled ${PHANTOM_LABEL}"
+	say "found boot medium on ${device}"
+
+	mount -t auto -o ro "$device" "$MEDIUM" || fail "cannot mount ${device}"
+	[ -f "${MEDIUM}${PHANTOM_IMAGE}" ] || fail "no root image on medium"
+
+	copy_to_ram "${MEDIUM}${PHANTOM_IMAGE}" "${RAM}/root.squashfs"
+
+	if [ "$PHANTOM_KEEP_MEDIUM" -eq 0 ]; then
+		umount "$MEDIUM" || fail "cannot release boot medium"
+		say "boot medium released, the drive can be removed now"
+	fi
+
+	mount -t squashfs -o ro,loop "${RAM}/root.squashfs" "$LOWER" \
+		|| fail "cannot mount root image"
+
+	mount -t tmpfs -o mode=0755 tmpfs "$UPPER"
+	mkdir -p "${UPPER}/data" "${UPPER}/work"
+
+	mount -t overlay overlay \
+		-o "lowerdir=${LOWER},upperdir=${UPPER}/data,workdir=${UPPER}/work" \
+		"${rootmnt}" || fail "cannot stack overlay"
+
+	say "root is in memory"
+}
