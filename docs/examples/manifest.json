@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "phantom-starter",
+  "name": "Phantom Starter",
+  "createdAt": "2026-08-26T00:00:00Z",
+  "minecraft": {
+    "version": "1.21.8"
+  },
+  "loader": {
+    "kind": "fabric",
+    "version": "0.16.14"
+  },
+  "java": {
+    "major": 21,
+    "distribution": "temurin"
+  },
+  "auth": {
+    "mode": "microsoft"
+  },
+  "graphics": {
+    "vendor": "auto"
+  },
+  "jvm": {
+    "heapMB": 4096,
+    "args": [
+      "-XX:+UseG1GC"
+    ]
+  },
+  "mods": [
+    {
+      "source": "modrinth",
+      "projectId": "AANobbMI",
+      "versionId": "vN2gRIJ8",
+      "filename": "sodium-fabric-0.6.13.jar",
+      "artifact": {
+        "url": "https://cdn.modrinth.com/data/AANobbMI/versions/vN2gRIJ8/sodium.jar",
+        "size": 1048576,
+        "sha512": "7b486b49113b3585e6ca81bb6809516eefd5825cbb6a4ff8764a829c1d38e3e547fb1b8990cc22206b760b8c4143cdae9bb030b0e5ffaefcad9f81e56fa8b3b3"
+      }
+    },
+    {
+      "source": "modrinth",
+      "projectId": "YL57xq9U",
+      "versionId": "abc12345",
+      "filename": "iris-fabric-1.8.0.jar",
+      "artifact": {
+        "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/abc12345/iris.jar",
+        "size": 2097152,
+        "sha512": "7b486b49113b3585e6ca81bb6809516eefd5825cbb6a4ff8764a829c1d38e3e547fb1b8990cc22206b760b8c4143cdae9bb030b0e5ffaefcad9f81e56fa8b3b3"
+      }
+    },
+    {
+      "source": "curseforge",
+      "projectId": "238222",
+      "versionId": "5678",
+      "filename": "jei-locked.jar",
+      "manual": true,
+      "artifact": {
+        "size": 3145728,
+        "sha512": "7b486b49113b3585e6ca81bb6809516eefd5825cbb6a4ff8764a829c1d38e3e547fb1b8990cc22206b760b8c4143cdae9bb030b0e5ffaefcad9f81e56fa8b3b3"
+      }
+    }
+  ],
+  "servers": [
+    {
+      "name": "Home",
+      "address": "mc.example.com:25565"
+    }
+  ]
+}
