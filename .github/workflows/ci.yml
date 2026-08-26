@@ -45,6 +45,12 @@ jobs:
             mmdebstrap squashfs-tools xorriso mtools dosfstools \
             debian-archive-keyring \
             grub-efi-amd64-bin grub-pc-bin qemu-system-x86
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build the agent
+        run: make build
       - name: Build image
         run: sudo os/build.sh
       - name: Boot image under QEMU

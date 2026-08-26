@@ -19,6 +19,7 @@ WORK="${REPO_ROOT}/build"
 OUT="${REPO_ROOT}/out"
 ROOTFS=""
 KEEP_ROOTFS=0
+ALLOW_NO_AGENT=0
 
 usage() {
 	cat <<-EOF
@@ -32,6 +33,7 @@ usage() {
 		  --out DIR       Output directory (default: ${OUT})
 		  --work DIR      Scratch directory (default: ${WORK})
 		  --keep-rootfs   Do not delete the bootstrapped tree on exit
+		  --allow-no-agent Build an image without phantomd, for boot chain work
 		  -h, --help      This message
 	EOF
 }
@@ -53,6 +55,7 @@ parse_args() {
 		--out) OUT="$2"; shift 2 ;;
 		--work) WORK="$2"; shift 2 ;;
 		--keep-rootfs) KEEP_ROOTFS=1; shift ;;
+		--allow-no-agent) ALLOW_NO_AGENT=1; shift ;;
 		-h | --help) usage; exit 0 ;;
 		*) die "unknown option: $1" ;;
 		esac
@@ -126,8 +129,10 @@ configure() {
 
 	if [ -x "${OUT}/phantomd" ]; then
 		install -m 0755 "${OUT}/phantomd" "${ROOTFS}/usr/bin/phantomd"
-	else
+	elif [ "$ALLOW_NO_AGENT" -eq 1 ]; then
 		log "no agent binary in ${OUT}, image will boot without phantomd"
+	else
+		die "no agent binary at ${OUT}/phantomd, run 'make build' first or pass --allow-no-agent"
 	fi
 
 	echo "phantom" >"${ROOTFS}/etc/hostname"
