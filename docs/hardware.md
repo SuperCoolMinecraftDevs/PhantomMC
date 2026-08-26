@@ -65,6 +65,19 @@ It says nothing at all about graphics, because there is no real GPU involved.
 Real hardware is the only way to test the parts that matter for actually
 playing. There is no substitute and no plan to pretend otherwise.
 
+## Java runtimes
+
+| Minecraft | Java required | Shipped in the image |
+| --- | --- | --- |
+| 1.21.x | 21 | yes |
+| 26.x | 25 | yes |
+| 1.17 to 1.20.x | 17 | no, fetched at boot |
+| 1.16 and older | 8 | no, fetched at boot |
+
+Both shipped runtimes together cost roughly 35 MB compressed, which is a good
+trade against downloading a runtime on every boot for the versions most people
+play.
+
 ## Known gaps
 
 - Nvidia variant is not built

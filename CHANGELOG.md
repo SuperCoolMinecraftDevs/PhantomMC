@@ -21,3 +21,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   overlay on the read only root.
 - QEMU smoke test asserting the image reaches userspace with the boot medium
   released.
+- Mojang version metadata model with platform rule evaluation, classpath
+  assembly and argument substitution.
+- Java runtime discovery and exact major version selection. The image ships
+  Java 21 and Java 25.
+- Kiosk session units, the phantom runtime user and a graphical default
+  target.

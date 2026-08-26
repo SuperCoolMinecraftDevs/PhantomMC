@@ -72,7 +72,16 @@ ignored.
 | Field | Rules |
 | --- | --- |
 | `major` | 8 or greater. Must match what the chosen Minecraft version requires |
-| `distribution` | Runtime to fetch, currently `temurin` |
+| `distribution` | Runtime to fetch when the image does not already carry the right major |
+
+The image ships Java 21 and Java 25, which between them cover the 1.21 and 26
+release lines. The agent selects between them by reading `javaVersion` from
+Mojang's version document rather than trusting this field, because the version
+document is authoritative and a manifest can be wrong.
+
+The match is exact in both directions. Too old and the game will not start. Too
+new and mod loaders and reflection heavy mods fail in ways that are difficult to
+read out of a crash log.
 
 ### `auth`
 
