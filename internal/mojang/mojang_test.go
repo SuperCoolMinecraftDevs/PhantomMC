@@ -136,13 +136,7 @@ func TestArgumentUnmarshalBothShapes(t *testing.T) {
 
 func TestResolveBuildsClasspathAndSubstitutes(t *testing.T) {
 	v := loadVersion(t)
-	spec, err := v.Resolve(LinuxAMD64(), "/lib", Vars{
-		PlayerName: "Steve",
-		GameDir:    "/game",
-		AssetsDir:  "/game/assets",
-		UUID:       "abc",
-		UserType:   "msa",
-	})
+	spec, err := v.Resolve(LinuxAMD64(), "/lib")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,12 +153,14 @@ func TestResolveBuildsClasspathAndSubstitutes(t *testing.T) {
 		}
 	}
 
+	// Templates must survive Resolve untouched so that Command can fill them in
+	// once, with account details that only exist at launch time.
 	joined := strings.Join(spec.GameArgs, " ")
-	if !strings.Contains(joined, "Steve") {
-		t.Errorf("player name not substituted: %s", joined)
+	if !strings.Contains(joined, "${auth_player_name}") {
+		t.Errorf("placeholders must not be expanded during resolve: %s", joined)
 	}
-	if strings.Contains(joined, "${") {
-		t.Errorf("unsubstituted placeholder remains: %s", joined)
+	if spec.VersionName != v.ID {
+		t.Errorf("version name not carried: %s", spec.VersionName)
 	}
 
 	for _, arg := range spec.JVMArgs {
@@ -178,10 +174,10 @@ func TestResolveBuildsClasspathAndSubstitutes(t *testing.T) {
 }
 
 func TestResolveRejectsIncompleteVersion(t *testing.T) {
-	if _, err := (&Version{ID: "x"}).Resolve(LinuxAMD64(), "/lib", Vars{}); err == nil {
+	if _, err := (&Version{ID: "x"}).Resolve(LinuxAMD64(), "/lib"); err == nil {
 		t.Fatal("expected an error for a version with no main class")
 	}
-	if _, err := (&Version{ID: "x", MainClass: "M"}).Resolve(LinuxAMD64(), "/lib", Vars{}); err == nil {
+	if _, err := (&Version{ID: "x", MainClass: "M"}).Resolve(LinuxAMD64(), "/lib"); err == nil {
 		t.Fatal("expected an error for a version with no client download")
 	}
 }

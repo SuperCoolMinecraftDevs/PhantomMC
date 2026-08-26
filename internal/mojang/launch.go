@@ -8,12 +8,14 @@ import (
 
 // LaunchSpec is everything needed to start the game, resolved for one platform.
 type LaunchSpec struct {
-	MainClass  string
-	Classpath  []string
-	GameArgs   []string
-	JVMArgs    []string
-	JavaMajor  int
-	AssetIndex string
+	MainClass   string
+	Classpath   []string
+	GameArgs    []string
+	JVMArgs     []string
+	JavaMajor   int
+	AssetIndex  string
+	VersionName string
+	VersionType string
 }
 
 // Vars are the placeholder substitutions Mojang's argument templates expect.
@@ -49,9 +51,11 @@ func (v *Version) SelectLibraries(p Platform) []Download {
 	return out
 }
 
-// Resolve produces a launch specification for the platform, with every
-// placeholder substituted.
-func (v *Version) Resolve(p Platform, libraryDir string, vars Vars) (*LaunchSpec, error) {
+// Resolve produces a launch specification for the platform. Argument templates
+// are returned unsubstituted: account details are not known at install time,
+// and substituting twice silently replaces them with empty strings, which the
+// game reports much later as an invalid uuid.
+func (v *Version) Resolve(p Platform, libraryDir string) (*LaunchSpec, error) {
 	if v.MainClass == "" {
 		return nil, fmt.Errorf("version %s has no main class", v.ID)
 	}
@@ -65,50 +69,43 @@ func (v *Version) Resolve(p Platform, libraryDir string, vars Vars) (*LaunchSpec
 	for _, artifact := range v.SelectLibraries(p) {
 		classpath = append(classpath, filepath.Join(libraryDir, artifact.Path))
 	}
-	classpath = append(classpath, filepath.Join(libraryDir, clientPath(v.ID, client)))
-
-	vars.Classpath = strings.Join(classpath, string(filepath.ListSeparator))
-	if vars.AssetIndex == "" {
-		vars.AssetIndex = v.AssetIndex.ID
-	}
-	if vars.VersionName == "" {
-		vars.VersionName = v.ID
-	}
-	if vars.VersionType == "" {
-		vars.VersionType = v.Type
-	}
+	classpath = append(classpath, filepath.Join(libraryDir, ClientJarPath(v.ID, client)))
 
 	return &LaunchSpec{
-		MainClass:  v.MainClass,
-		Classpath:  classpath,
-		JVMArgs:    expand(v.Arguments.JVM, p, vars),
-		GameArgs:   expand(v.Arguments.Game, p, vars),
-		JavaMajor:  v.JavaVersion.MajorVersion,
-		AssetIndex: v.AssetIndex.ID,
+		MainClass:   v.MainClass,
+		Classpath:   classpath,
+		JVMArgs:     selectArgs(v.Arguments.JVM, p),
+		GameArgs:    selectArgs(v.Arguments.Game, p),
+		JavaMajor:   v.JavaVersion.MajorVersion,
+		AssetIndex:  v.AssetIndex.ID,
+		VersionName: v.ID,
+		VersionType: v.Type,
 	}, nil
 }
 
-func clientPath(id string, client Download) string {
+// selectArgs filters by platform rules without expanding placeholders.
+func selectArgs(args []Argument, p Platform) []string {
+	var out []string
+	for _, arg := range args {
+		if !p.Allows(arg.Rules) {
+			continue
+		}
+		out = append(out, arg.Values...)
+	}
+	return out
+}
+
+func ClientJarPath(id string, client Download) string {
 	if client.Path != "" {
 		return client.Path
 	}
 	return filepath.Join("com", "mojang", "minecraft", id, "minecraft-"+id+"-client.jar")
 }
 
-func expand(args []Argument, p Platform, vars Vars) []string {
-	var out []string
-	for _, arg := range args {
-		if !p.Allows(arg.Rules) {
-			continue
-		}
-		for _, value := range arg.Values {
-			out = append(out, substitute(value, vars))
-		}
-	}
-	return out
-}
-
-func substitute(s string, v Vars) string {
+// Substitute expands Mojang's placeholder syntax. Exported because argument
+// templates are resolved twice: once without account details when planning, and
+// again at launch when they are known.
+func Substitute(s string, v Vars) string {
 	return placeholders(v).Replace(s)
 }
 
