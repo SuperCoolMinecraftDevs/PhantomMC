@@ -145,7 +145,6 @@ configure() {
 		phantom
 
 	chroot "$ROOTFS" systemctl enable seatd.service
-	chroot "$ROOTFS" systemctl enable phantom-agent.service
 	chroot "$ROOTFS" systemctl enable phantom-session.service
 	chroot "$ROOTFS" systemctl set-default graphical.target
 

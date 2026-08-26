@@ -8,6 +8,8 @@ export XDG_RUNTIME_DIR
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 0700 "$XDG_RUNTIME_DIR"
 
+MANIFEST="${PHANTOM_MANIFEST:-/etc/phantom/manifest.json}"
+
 # Minecraft's bundled GLFW targets X11, so the session runs XWayland underneath
 # cage rather than attempting a native Wayland surface. See docs/hardware.md.
-exec cage -d -- /usr/lib/phantom/launch
+exec cage -d -- /usr/bin/phantomd -manifest "$MANIFEST" -root /var/lib/phantom

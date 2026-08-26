@@ -1,7 +1,8 @@
 [Unit]
 Description=PhantomMC game session
-After=phantom-agent.service
-Requires=phantom-agent.service
+After=network-online.target seatd.service
+Wants=network-online.target
+Requires=seatd.service
 
 [Service]
 Type=simple
@@ -12,6 +13,7 @@ TTYPath=/dev/tty1
 StandardInput=tty
 StandardOutput=journal+console
 StandardError=journal+console
+EnvironmentFile=-/etc/phantom/manifest.env
 ExecStart=/usr/lib/phantom/session
 Restart=no
 
