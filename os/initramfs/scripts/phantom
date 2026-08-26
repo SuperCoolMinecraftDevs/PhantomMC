@@ -2,7 +2,7 @@
 # initramfs-tools boot script, selected with boot=phantom on the kernel command
 # line. Copies the compressed root into memory, releases the boot medium, and
 # builds a writable overlay on top of it. See ADR 0003.
-
+#
 # shellcheck shell=dash
 # Runs under busybox ash, which supports 'local'. initramfs-tools provides
 # 'rootmnt', 'panic' and the functions file.
@@ -34,6 +34,7 @@ parse_cmdline() {
 	for arg in $cmdline; do
 		case "$arg" in
 		phantom.label=*) PHANTOM_LABEL="${arg#phantom.label=}" ;;
+		phantom.image=*) PHANTOM_IMAGE="${arg#phantom.image=}" ;;
 		phantom.keepmedium) PHANTOM_KEEP_MEDIUM=1 ;;
 		esac
 	done
@@ -45,20 +46,65 @@ say() {
 
 fail() {
 	say "$1"
-	say "dropping to a shell"
 	panic "$1"
 }
 
+load_modules() {
+	for mod in loop squashfs overlay isofs vfat ext4; do
+		modprobe "$mod" 2>/dev/null || true
+	done
+	if command -v udevadm >/dev/null 2>&1; then
+		udevadm settle --timeout=10 2>/dev/null || true
+	fi
+}
+
+# A stick written with a plain file copy keeps whatever label it already had, so
+# the label is only a fast path. The authoritative test is whether a device
+# actually carries the payload.
+carries_payload() {
+	mount -t auto -o ro "$1" "$MEDIUM" 2>/dev/null || return 1
+	if [ -f "${MEDIUM}${PHANTOM_IMAGE}" ]; then
+		return 0
+	fi
+	umount "$MEDIUM" 2>/dev/null || true
+	return 1
+}
+
+candidate_devices() {
+	if [ -e "/dev/disk/by-label/${PHANTOM_LABEL}" ]; then
+		readlink -f "/dev/disk/by-label/${PHANTOM_LABEL}"
+	fi
+	blkid -o device 2>/dev/null || true
+	awk 'NR>2 && $4 !~ /^(ram|loop|zram)/ {print "/dev/" $4}' /proc/partitions
+}
+
+# Leaves the medium mounted at $MEDIUM on success and echoes the device.
 find_medium() {
-	local waited=0
-	while [ "$waited" -lt 30 ]; do
-		if [ -e "/dev/disk/by-label/${PHANTOM_LABEL}" ]; then
-			readlink -f "/dev/disk/by-label/${PHANTOM_LABEL}"
-			return 0
+	local waited=0 device seen
+
+	while [ "$waited" -lt 45 ]; do
+		seen=""
+		for device in $(candidate_devices); do
+			case " $seen " in
+			*" $device "*) continue ;;
+			esac
+			seen="$seen $device"
+
+			[ -b "$device" ] || continue
+			if carries_payload "$device"; then
+				echo "$device"
+				return 0
+			fi
+		done
+
+		if [ "$waited" -eq 0 ]; then
+			say "waiting for a boot medium carrying ${PHANTOM_IMAGE}"
 		fi
 		sleep 1
 		waited=$((waited + 1))
 	done
+
+	say "devices seen: $(candidate_devices | tr '\n' ' ')"
 	return 1
 }
 
@@ -74,17 +120,11 @@ copy_to_ram() {
 mountroot() {
 	parse_cmdline
 	mkdir -p "$MEDIUM" "$RAM" "$LOWER" "$UPPER"
-
-	modprobe loop
-	modprobe squashfs
-	modprobe overlay
+	load_modules
 
 	local device
-	device=$(find_medium) || fail "no medium labelled ${PHANTOM_LABEL}"
+	device=$(find_medium) || fail "no boot medium carrying ${PHANTOM_IMAGE}"
 	say "found boot medium on ${device}"
-
-	mount -t auto -o ro "$device" "$MEDIUM" || fail "cannot mount ${device}"
-	[ -f "${MEDIUM}${PHANTOM_IMAGE}" ] || fail "no root image on medium"
 
 	copy_to_ram "${MEDIUM}${PHANTOM_IMAGE}" "${RAM}/root.squashfs"
 
