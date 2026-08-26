@@ -10,7 +10,7 @@ person and are the honest numbers, not the optimistic ones.
   M1 ████████████████████  done   bootable image, root in RAM
   M2 ██████████████░░░░░░         graphics and a running game   ◀── here
   M3 ██████████████████░░         launcher core
-  M4 ░░░░░░░░░░░░░░░░░░░░         authentication
+  M4 ████████████████░░░░         authentication
   M5 ░░░░░░░░░░░░░░░░░░░░         network bring up
   M6 ░░░░░░░░░░░░░░░░░░░░         mods and loaders
   M7 ░░░░░░░░░░░░░░░░░░░░         the builder
@@ -61,12 +61,20 @@ downloaded, and the game launched as far as GLFW.
 Left: resuming interrupted downloads by range request, and a disk space check
 before starting a half gigabyte of downloads.
 
-## M4 Authentication — 1 weekend, blocked
+## M4 Authentication — implemented, unverified
 
-Device code flow, the Xbox Live and XSTS chain, entitlement assertion checking.
+Device code flow, the Xbox Live and XSTS chain, the Minecraft token exchange and
+the profile lookup are all written and tested against a fake chain. The request
+format is confirmed correct against Microsoft's live endpoint, which rejects an
+invalid application with a well formed error rather than a malformed request
+complaint.
 
-Blocked on the Azure application grant, which has lead time and must be started
-well before this milestone.
+End to end verification needs a real Azure application with the
+`XboxLive.signin` grant. That is the outstanding blocker and it is an
+administrative one, not a coding one.
+
+Entitlement assertion checking for offline mode is still to do and belongs with
+the builder in M7, since that is where assertions are issued.
 
 ## M5 Network bring up — 1 weekend
 

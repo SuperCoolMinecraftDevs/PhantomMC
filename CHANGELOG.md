@@ -34,3 +34,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   flagging sessions too short to have reached the menu.
 - Offline account identity derived the same way Minecraft has always derived
   it, so a player keeps a stable uuid without anything being stored.
+- Microsoft device code sign in, including the Xbox Live, XSTS and Minecraft
+  token chain, readable messages for the common XSTS refusals, and ownership
+  detection. Sign in runs concurrently with the download.
+- `auth.clientId` in the manifest, so the Azure application can be rotated
+  without re-flashing a boot medium.
