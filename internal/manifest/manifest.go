@@ -74,6 +74,12 @@ type Auth struct {
 	Mode            AuthMode     `json:"mode"`
 	OfflineUsername string       `json:"offlineUsername,omitempty"`
 	Entitlement     *Entitlement `json:"entitlement,omitempty"`
+
+	// ClientID is the Azure application the device code flow signs in against.
+	// It travels in the manifest rather than being compiled in, so an operator
+	// can rotate it without anyone re-flashing a boot medium, and so this
+	// repository carries no credential of its own. See ADR 0005.
+	ClientID string `json:"clientId,omitempty"`
 }
 
 // Entitlement is issued by the web builder after a successful ownership check.

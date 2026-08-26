@@ -109,7 +109,13 @@ func validateAuth(a *Auth, now time.Time) ValidationErrors {
 		if a.OfflineUsername != "" {
 			add("auth.offlineUsername", "must be empty in microsoft mode")
 		}
+		if strings.TrimSpace(a.ClientID) == "" {
+			add("auth.clientId", "required in microsoft mode")
+		}
 	case AuthOffline:
+		if a.ClientID != "" {
+			add("auth.clientId", "must be empty in offline mode")
+		}
 		if !usernamePattern.MatchString(a.OfflineUsername) {
 			add("auth.offlineUsername", "must be 3 to 16 characters of A-Z, a-z, 0-9 or underscore")
 		}

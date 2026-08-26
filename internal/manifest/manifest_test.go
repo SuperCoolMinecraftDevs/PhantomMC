@@ -21,7 +21,7 @@ func valid() *Manifest {
 		Minecraft:     Minecraft{Version: "1.21.8"},
 		Loader:        Loader{Kind: LoaderFabric, Version: "0.16.14"},
 		Java:          Java{Major: 21, Distribution: "temurin"},
-		Auth:          Auth{Mode: AuthMicrosoft},
+		Auth:          Auth{Mode: AuthMicrosoft, ClientID: "app-id"},
 		Graphics:      Graphics{Vendor: GPUAuto},
 		JVM:           JVM{HeapMB: 4096},
 		Mods: []Mod{{
@@ -123,6 +123,23 @@ func TestManualModHasNoURL(t *testing.T) {
 
 	m.Mods[0].Artifact.URL = ""
 	assertValid(t, m)
+}
+
+func TestMicrosoftModeRequiresAClientID(t *testing.T) {
+	m := valid()
+	m.Auth.ClientID = ""
+	assertRejects(t, m, "auth.clientId")
+}
+
+func TestOfflineModeRejectsAClientID(t *testing.T) {
+	m := valid()
+	m.Auth = Auth{
+		Mode:            AuthOffline,
+		OfflineUsername: "Steve",
+		ClientID:        "app-id",
+		Entitlement:     &Entitlement{ExpiresAt: now.Add(time.Hour), Signature: "sig"},
+	}
+	assertRejects(t, m, "auth.clientId")
 }
 
 func TestOfflineRequiresEntitlement(t *testing.T) {
